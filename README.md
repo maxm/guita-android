@@ -1,0 +1,1 @@
+An android app to create entries in my personal ledger.
