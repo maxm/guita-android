@@ -59,6 +59,8 @@ public class NewEntryFragment extends Fragment {
         resetEntry();
         updateEntryList();
 
+        newEntry.requestFocus();
+
         return rootView;
     }
 

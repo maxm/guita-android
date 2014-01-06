@@ -141,7 +141,7 @@ public class MainActivity extends Activity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(MainActivity.this, message, length);
+                Toast.makeText(MainActivity.this, message, length).show();
             }
         });
     }

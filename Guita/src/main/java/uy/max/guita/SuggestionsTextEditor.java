@@ -12,6 +12,9 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -133,6 +136,20 @@ public class SuggestionsTextEditor extends EditText {
             for(String acc : accounts) {
                 String display = acc.replace(":", ":\u200B");
                 suggestions.add(new Suggestion(acc + "  ", start, end, display));
+            }
+        } else if(typed.matches("\\s+\\w.*?\\s\\s.*\\d")) {
+            Matcher matcher = Pattern.compile("\\s+\\w.*?\\s\\s[^\\d]*(\\d+(\\.\\d+)?)").matcher(typed);
+            if (matcher.matches()) {
+                String numString = matcher.group(1);
+                BigDecimal value = new BigDecimal(numString);
+                BigDecimal alpha = value.multiply(new BigDecimal("0.03")).setScale(2, RoundingMode.HALF_DOWN);
+                alpha = value.add(alpha.add(alpha.multiply(new BigDecimal("0.22")).setScale(2, RoundingMode.HALF_DOWN)));
+                BigDecimal half = value.divide(new BigDecimal(2));
+
+                int start = lineStart + matcher.start(1);
+                int end = lineStart + matcher.end(1);
+                suggestions.add(new Suggestion(alpha.toString(), start, end, "\u03B1BROU"));
+                suggestions.add(new Suggestion(half.toString(), start, end, "half"));
             }
         }
 
