@@ -45,7 +45,6 @@ public class NewEntryFragment extends Fragment {
         });
 
         entryList = (ListView)rootView.findViewById(R.id.entry_list);
-        entryList.setEmptyView(rootView.findViewById(android.R.id.empty));
         entryList.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
         entryList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override

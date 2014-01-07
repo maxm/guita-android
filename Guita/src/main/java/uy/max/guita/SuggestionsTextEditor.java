@@ -62,14 +62,10 @@ public class SuggestionsTextEditor extends EditText {
 
     public void UpdateSuggestions() {
         if (suggestionsContainer == null) return;
-        suggestionsContainer.setVisibility(isFocused() ? VISIBLE : GONE);
+        suggestionsContainer.removeAllViews();
         if (!isFocused()) return;
         List<Suggestion> suggestions = getSuggestions(getText().toString(), getSelectionEnd());
-        if (suggestions.isEmpty()) {
-            suggestionsContainer.setVisibility(GONE);
-            return;
-        }
-        suggestionsContainer.removeAllViews();
+        if (suggestions.isEmpty()) return;
         if (inflater == null) inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         for(Suggestion suggestion : suggestions) {
             Button button = (Button)inflater.inflate(R.layout.suggestion_view, suggestionsContainer, false);
@@ -118,8 +114,7 @@ public class SuggestionsTextEditor extends EditText {
 
         if (line.length() == 0) {
             SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd");
-            String date = df.format(new Date());
-            suggestions.add(new Suggestion(date, lineStart, lineEnd));
+            suggestions.add(new Suggestion(df.format(new Date()), lineStart, lineEnd));
         } else if (typed.matches("\\s+\\w[\\w\\s:]*\\s\\s+")) {
             suggestions.add(new Suggestion("$", cursor, cursor));
             suggestions.add(new Suggestion("US$", cursor, cursor));
@@ -130,11 +125,15 @@ public class SuggestionsTextEditor extends EditText {
             if (accounts.size() > maxAccounts) {
                 accounts = accounts.subList(accounts.size() - maxAccounts, accounts.size());
             }
-            Collections.reverse(accounts);
+            if (accounts.size() == 3) {
+                accounts.add(1, accounts.get(2));
+                accounts.remove(3);
+            }
             int start = lineStart + MatchGroup("(\\s+)\\w.*", typed, 1).length();
             int end = lineStart + MatchGroup("(\\s+\\w.*?)(\\s\\s.*|$)", typed, 1).length();
             for(String acc : accounts) {
                 String display = acc.replace(":", ":\u200B");
+                if (display.length() > 20) display = display.replace("Expenses", "Ex").replace("Assets", "As").replace("Income", "In");
                 suggestions.add(new Suggestion(acc + "  ", start, end, display));
             }
         } else if(typed.matches("\\s+\\w.*?\\s\\s.*\\d")) {

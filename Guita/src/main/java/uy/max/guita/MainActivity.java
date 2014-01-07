@@ -1,35 +1,26 @@
 package uy.max.guita;
 
-import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.database.MatrixCursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.SearchView;
+import android.widget.SimpleCursorAdapter;
 import android.widget.Toast;
-
-import com.google.android.gms.auth.GoogleAuthException;
-import com.google.android.gms.auth.GoogleAuthUtil;
-import com.google.android.gms.auth.UserRecoverableAuthException;
-import com.google.android.gms.common.AccountPicker;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -38,6 +29,7 @@ import java.util.List;
 public class MainActivity extends Activity {
     public static Context AppContext;
     NewEntryFragment newEntryFragment;
+    QueryFragment queryFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,9 +40,12 @@ public class MainActivity extends Activity {
 
         if (savedInstanceState == null) {
             newEntryFragment = new NewEntryFragment();
+            queryFragment = new QueryFragment();
             getFragmentManager().beginTransaction()
+                    .add(R.id.container, queryFragment)
                     .add(R.id.container, newEntryFragment)
                     .commit();
+            getFragmentManager().beginTransaction().hide(queryFragment).show(newEntryFragment).commit();
         }
 
         Intent intent = getIntent();
@@ -69,6 +64,37 @@ public class MainActivity extends Activity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
+
+        SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
+        searchView.setQueryHint("Query");
+        searchView.setIconified(false);
+        searchView.setIconifiedByDefault(false);
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            boolean visible = false;
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                if (query.isEmpty()) return false;
+                queryFragment.doQuery(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                if (!visible && !newText.isEmpty()) {
+                    getFragmentManager().beginTransaction().hide(newEntryFragment).show(queryFragment).commit();
+                    visible = true;
+                }
+                if (visible && newText.isEmpty()) {
+                    getFragmentManager().beginTransaction().hide(queryFragment).show(newEntryFragment).commit();
+                    queryFragment.clear();
+                    visible = false;
+                    return true;
+                }
+                return false;
+            }
+        });
+
         return true;
     }
 
@@ -157,8 +183,7 @@ public class MainActivity extends Activity {
 
                     if (con.getResponseCode() == 200) {
                         Log.i("GUITA", "Update ledger from server");
-                        toastFromBackground("Updated ledger", Toast.LENGTH_SHORT);
-                        Data.updateLedger(readResponse(con.getInputStream()));
+                        Data.updateLedger(Util.readStream(con.getInputStream()));
                     } else {
                         toastFromBackground("Server error " + con.getResponseCode(), Toast.LENGTH_LONG);
                         Log.e("GUITA", "Server code " + con.getResponseCode());
@@ -171,21 +196,6 @@ public class MainActivity extends Activity {
                 return 0;
             }
         }.execute();
-    }
-
-    String readResponse(InputStream inputStream) {
-        BufferedReader r = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder builder = new StringBuilder();
-        char[] buffer = new char[10000];
-        try {
-            int read = 0;
-            while((read = r.read(buffer, 0, buffer.length)) > 0) {
-                builder.append(buffer, 0, read);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return builder.toString();
     }
 
     private String getQuery(List<NameValuePair> params) throws UnsupportedEncodingException
