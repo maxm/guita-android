@@ -16,7 +16,9 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class NewEntryFragment extends Fragment {
 
@@ -41,6 +43,7 @@ public class NewEntryFragment extends Fragment {
                 Data.cacheEntry(newEntry.getText().toString().trim());
                 resetEntry();
                 updateEntryList();
+                ((MainActivity)getActivity()).uploadEntries();
             }
         });
 
@@ -49,8 +52,10 @@ public class NewEntryFragment extends Fragment {
         entryList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                Data.removeCacheEntry(position);
-                updateEntryList();
+                if (position > 0) {
+                    Data.removeCacheEntry(position - 1);
+                    updateEntryList();
+                }
                 return true;
             }
         });
@@ -70,7 +75,9 @@ public class NewEntryFragment extends Fragment {
     }
 
     public void updateEntryList() {
-        entryList.setAdapter(new ArrayAdapter<String>(getActivity(), R.layout.entry_list_item, R.id.entry, Data.entryCache));
+        List<String> entries = new ArrayList<String>(Data.entryCache);
+        entries.add(0, Data.ledger.substring(Data.ledger.length() - 1000, Data.ledger.length()));
+        entryList.setAdapter(new ArrayAdapter<String>(getActivity(), R.layout.entry_list_item, R.id.entry, entries));
     }
 
     public void updateEntryListFromBackground() {

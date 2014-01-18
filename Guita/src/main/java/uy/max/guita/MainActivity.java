@@ -3,14 +3,13 @@ package uy.max.guita;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.database.MatrixCursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
-import android.view.MenuItem;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.SearchView;
-import android.widget.SimpleCursorAdapter;
 import android.widget.Toast;
 
 import org.apache.http.NameValuePair;
@@ -31,6 +30,9 @@ public class MainActivity extends Activity {
     NewEntryFragment newEntryFragment;
     QueryFragment queryFragment;
 
+    ProgressBar progressBar;
+    int progressBarStack;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,15 +40,21 @@ public class MainActivity extends Activity {
 
         setContentView(R.layout.activity_main);
 
-        if (savedInstanceState == null) {
+        progressBar = (ProgressBar)findViewById(R.id.progress);
+
+        newEntryFragment = (NewEntryFragment) getFragmentManager().findFragmentByTag("new-entry");
+        queryFragment = (QueryFragment) getFragmentManager().findFragmentByTag("query");
+
+        if (newEntryFragment == null) {
             newEntryFragment = new NewEntryFragment();
             queryFragment = new QueryFragment();
             getFragmentManager().beginTransaction()
-                    .add(R.id.container, queryFragment)
-                    .add(R.id.container, newEntryFragment)
+                    .add(R.id.container, queryFragment, "query")
+                    .add(R.id.container, newEntryFragment, "new-entry")
                     .commit();
-            getFragmentManager().beginTransaction().hide(queryFragment).show(newEntryFragment).commit();
         }
+
+        getFragmentManager().beginTransaction().hide(queryFragment).show(newEntryFragment).commit();
 
         Intent intent = getIntent();
         if (intent != null && intent.getData() != null) {
@@ -60,6 +68,11 @@ public class MainActivity extends Activity {
         updateLedger();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        uploadEntries();
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -98,19 +111,9 @@ public class MainActivity extends Activity {
         return true;
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_upload:
-                item.setIcon(android.R.drawable.stat_notify_sync);
-                item.setEnabled(false);
-                uploadEntries(item);
-                return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    void uploadEntries(final MenuItem item) {
+    public void uploadEntries() {
+        if (Data.entryCache.isEmpty()) return;
+        showProgressBar();
         new AsyncTask<Integer, Integer, Integer>() {
             @Override
             protected Integer doInBackground(Integer... is) {
@@ -141,6 +144,7 @@ public class MainActivity extends Activity {
                         if (conn.getResponseCode() == 200) {
                             toastFromBackground("Upload complete", Toast.LENGTH_LONG);
                             Data.clearCacheEntries();
+                            Data.updateLedger(Util.readStream(conn.getInputStream()));
                             newEntryFragment.updateEntryListFromBackground();
                         } else {
                             toastFromBackground("Server error " + conn.getResponseCode(), Toast.LENGTH_LONG);
@@ -150,15 +154,9 @@ public class MainActivity extends Activity {
                         toastFromBackground("Can't reach server", Toast.LENGTH_LONG);
                         e.printStackTrace();
                     }
+                    hideProgressBar();
                     return 0;
                 }
-            }
-
-            @Override
-            protected void onPostExecute(Integer integer) {
-                super.onPostExecute(integer);
-                item.setIcon(android.R.drawable.ic_menu_upload);
-                item.setEnabled(true);
             }
         }.execute();
     }
@@ -173,6 +171,7 @@ public class MainActivity extends Activity {
     }
 
     void updateLedger() {
+        showProgressBar();
         new AsyncTask<Integer, Integer, Integer>() {
             @Override
             protected Integer doInBackground(Integer... params) {
@@ -184,6 +183,7 @@ public class MainActivity extends Activity {
                     if (con.getResponseCode() == 200) {
                         Log.i("GUITA", "Update ledger from server");
                         Data.updateLedger(Util.readStream(con.getInputStream()));
+                        newEntryFragment.updateEntryListFromBackground();
                     } else {
                         toastFromBackground("Server error " + con.getResponseCode(), Toast.LENGTH_LONG);
                         Log.e("GUITA", "Server code " + con.getResponseCode());
@@ -193,6 +193,7 @@ public class MainActivity extends Activity {
                     toastFromBackground("Can't reach server", Toast.LENGTH_LONG);
                     e.printStackTrace();
                 }
+                hideProgressBar();
                 return 0;
             }
         }.execute();
@@ -216,5 +217,27 @@ public class MainActivity extends Activity {
         }
 
         return result.toString();
+    }
+
+    void showProgressBar() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ++progressBarStack;
+                progressBar.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    void hideProgressBar() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                --progressBarStack;
+                if (progressBarStack == 0) {
+                    progressBar.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 }

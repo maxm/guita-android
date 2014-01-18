@@ -57,6 +57,8 @@ public class Data {
 
     public static void updateLedger(String ledger) {
         synchronized (accounts) {
+            if (ledger == null) ledger = "";
+            Data.ledger = ledger;
             setString("ledger", ledger);
             accounts.clear();
             Matcher matcher = Pattern.compile("^[ \\t]+(\\w.*?)([ \\t]{2}.*|$)", Pattern.MULTILINE).matcher(ledger);
