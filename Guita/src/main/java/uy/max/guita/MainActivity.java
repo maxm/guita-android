@@ -3,6 +3,7 @@ package uy.max.guita;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -58,7 +59,8 @@ public class MainActivity extends Activity {
 
         Intent intent = getIntent();
         if (intent != null && intent.getData() != null) {
-            Data.setString("cookies", intent.getData().getEncodedFragment());
+            Log.i("GUITA", "Found intent data " + intent.getData().getFragment());
+            Data.setString("cookies", intent.getData().getFragment());
             finish();
             Intent newIntent = new Intent(this, MainActivity.class);
             newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -120,7 +122,7 @@ public class MainActivity extends Activity {
                 synchronized (Data.entryCache) {
                     if (Data.entryCache.isEmpty()) return 0;
                     try {
-                        URL url = new URL("http://ledger.outboxlabs.com/max/append");
+                        URL url = new URL(Data.BaseURL  + "append");
                         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                         conn.addRequestProperty("Cookie", Data.getString("cookies"));
                         conn.setReadTimeout(10000);
@@ -176,7 +178,7 @@ public class MainActivity extends Activity {
             @Override
             protected Integer doInBackground(Integer... params) {
                 try {
-                    URL url = new URL("http://ledger.outboxlabs.com/max/raw");
+                    URL url = new URL(Data.BaseURL  + "raw");
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     con.addRequestProperty("Cookie", Data.getString("cookies"));
 
@@ -184,6 +186,9 @@ public class MainActivity extends Activity {
                         Log.i("GUITA", "Update ledger from server");
                         Data.updateLedger(Util.readStream(con.getInputStream()));
                         newEntryFragment.updateEntryListFromBackground();
+                    } else if(con.getResponseCode() == 302) {
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(Data.BaseURL + "app_auth"));
+                        startActivity(browserIntent);
                     } else {
                         toastFromBackground("Server error " + con.getResponseCode(), Toast.LENGTH_LONG);
                         Log.e("GUITA", "Server code " + con.getResponseCode());

@@ -11,6 +11,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Data {
+    public static String BaseURL = "http://max.uy/ledger/max/";
+
     static List<String> accounts;
     static String ledger;
     public static List<String> entryCache;

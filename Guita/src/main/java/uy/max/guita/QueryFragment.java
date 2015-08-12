@@ -38,7 +38,7 @@ public class QueryFragment extends Fragment {
             @Override
             protected Integer doInBackground(Integer... params) {
                 try {
-                    URL url = new URL("http://ledger.outboxlabs.com/max/query_text?query=" + URLEncoder.encode(query, "utf-8"));
+                    URL url = new URL(Data.BaseURL + "query_text?query=" + URLEncoder.encode(query, "utf-8"));
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     con.addRequestProperty("Cookie", Data.getString("cookies"));
 
@@ -47,6 +47,8 @@ public class QueryFragment extends Fragment {
                         textView.setText(result);
                         scrollView.forceLayout();
                         scrollView.fullScroll(View.FOCUS_DOWN);
+                    } else {
+                        Log.e("GUITA", "Query server error " + con.getResponseMessage());
                     }
                     con.disconnect();
                 } catch (Exception e) {

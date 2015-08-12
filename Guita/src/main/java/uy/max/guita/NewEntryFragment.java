@@ -76,7 +76,7 @@ public class NewEntryFragment extends Fragment {
 
     public void updateEntryList() {
         List<String> entries = new ArrayList<String>(Data.entryCache);
-        entries.add(0, Data.ledger.substring(Data.ledger.length() - 1000, Data.ledger.length()));
+        entries.add(0, Data.ledger.substring(Data.ledger.length() - Math.min(1000, Data.ledger.length()), Data.ledger.length()));
         entryList.setAdapter(new ArrayAdapter<String>(getActivity(), R.layout.entry_list_item, R.id.entry, entries));
     }
 
